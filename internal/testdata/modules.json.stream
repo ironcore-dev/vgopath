@@ -1,0 +1,11 @@
+{
+	"Path": "a",
+	"Dir": "/tmp/a"
+}
+{
+	"Path": "example.org/b",
+	"Dir": "/tmp/example.org/b"
+}
+{
+	"Path": "example.org/d"
+}
