@@ -25,6 +25,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -109,16 +110,18 @@ type Module struct {
 }
 
 type moduleReader struct {
-	cmd      *exec.Cmd
-	waitDone chan struct{}
-	waitErr  error
-	stdout   io.ReadCloser
+	mu sync.Mutex
+
+	cmd    *exec.Cmd
+	stdout io.ReadCloser
+
+	exited  bool
+	waitErr error
 }
 
-func StartModuleReader() (io.ReadCloser, error) {
-	r := &moduleReader{}
-
+func StartGoModListJSONReader(dir string) (io.ReadCloser, error) {
 	cmd := exec.Command("go", "list", "-m", "-json", "all")
+	cmd.Dir = dir
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return nil, err
@@ -127,12 +130,6 @@ func StartModuleReader() (io.ReadCloser, error) {
 	if err := cmd.Start(); err != nil {
 		return nil, err
 	}
-
-	r.waitDone = make(chan struct{})
-	go func() {
-		defer close(r.waitDone)
-		r.waitErr = cmd.Wait()
-	}()
 
 	return &moduleReader{
 		cmd:    cmd,
@@ -145,11 +142,18 @@ func (r *moduleReader) Read(p []byte) (n int, err error) {
 }
 
 func (r *moduleReader) Close() error {
-	select {
-	case <-r.waitDone:
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if r.exited {
 		return r.waitErr
-	default:
 	}
+
+	waitDone := make(chan struct{})
+	go func() {
+		defer close(waitDone)
+		r.waitErr = r.cmd.Wait()
+	}()
 
 	timer := time.NewTimer(3 * time.Second)
 	defer timer.Stop()
@@ -157,7 +161,7 @@ func (r *moduleReader) Close() error {
 	select {
 	case <-timer.C:
 		return fmt.Errorf("error waiting for command to be completed")
-	case <-r.waitDone:
+	case <-waitDone:
 		return r.waitErr
 	}
 }
@@ -187,13 +191,18 @@ func ParseModules(r io.Reader) ([]Module, error) {
 }
 
 func ReadModules() ([]Module, error) {
-	rc, err := StartModuleReader()
+	rc, err := StartGoModListJSONReader("")
 	if err != nil {
 		return nil, err
 	}
 	defer func() { _ = rc.Close() }()
 
-	return ParseModules(rc)
+	mods, err := ParseModules(rc)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing modules: %w", err)
+	}
+
+	return mods, nil
 }
 
 type Options struct {

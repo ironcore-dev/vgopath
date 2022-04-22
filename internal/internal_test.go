@@ -18,11 +18,12 @@ import (
 	"bytes"
 	"fmt"
 	"go/build"
+	"io"
 	"os"
 	"path/filepath"
 
 	. "github.com/onmetal/vgopath/internal"
-	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
 )
@@ -33,7 +34,10 @@ var _ = Describe("Internal", func() {
 		moduleA, moduleB, moduleB1, moduleB11, moduleB2, moduleC Module
 	)
 	BeforeEach(func() {
-		tmpDir = GinkgoT().TempDir()
+		var err error
+		tmpDir, err = os.MkdirTemp("", "test")
+		Expect(err).NotTo(HaveOccurred())
+
 		moduleA = Module{
 			Path: "a",
 			Dir:  "/tmp/a",
@@ -58,6 +62,23 @@ var _ = Describe("Internal", func() {
 			Path: "example.org/user/c",
 			Dir:  "/tmp/example.org/user/c",
 		}
+	})
+	AfterEach(func() {
+		if tmpDir != "" {
+			Expect(os.RemoveAll(tmpDir)).To(Succeed())
+		}
+	})
+
+	Describe("StartGoModListJSONReader", func() {
+		It("should start a module reader", FlakeAttempts(50), func() {
+			rc, err := StartGoModListJSONReader("..")
+			Expect(err).NotTo(HaveOccurred())
+			defer func() { Expect(rc.Close()).To(Succeed()) }()
+
+			data, err := io.ReadAll(rc)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(data).NotTo(BeEmpty())
+		})
 	})
 
 	Describe("BuildModuleNodes", func() {
