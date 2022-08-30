@@ -1,6 +1,6 @@
 module github.com/onmetal/vgopath
 
-go 1.17
+go 1.19
 
 require (
 	github.com/google/addlicense v1.0.0
