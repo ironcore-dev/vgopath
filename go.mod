@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/google/addlicense v1.0.0
-	github.com/onsi/ginkgo/v2 v2.1.6
+	github.com/onsi/ginkgo/v2 v2.2.0
 	github.com/onsi/gomega v1.21.1
 )
 
