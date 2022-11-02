@@ -105,8 +105,10 @@ func BuildModuleNodes(modules []Module) ([]Node, error) {
 }
 
 type Module struct {
-	Path string
-	Dir  string
+	Path    string
+	Dir     string
+	Version string
+	Main    bool
 }
 
 type moduleReader struct {
@@ -181,10 +183,6 @@ func ParseModules(r io.Reader) ([]Module, error) {
 			return nil, err
 		}
 
-		// Don't include indirect modules without directory.
-		if mod.Dir == "" {
-			continue
-		}
 		mods = append(mods, mod)
 	}
 	return mods, nil
@@ -203,6 +201,20 @@ func ReadModules() ([]Module, error) {
 	}
 
 	return mods, nil
+}
+
+func FilterVendorModules(modules []Module) []Module {
+	var res []Module
+	for _, module := range modules {
+		// Don't vendor modules without paths / main modules.
+		if module.Dir == "" || module.Version == "" && module.Main {
+			continue
+		}
+
+		res = append(res, module)
+	}
+
+	return res
 }
 
 type Options struct {
@@ -267,6 +279,8 @@ func LinkGoSrc(dstDir string) error {
 	if err != nil {
 		return fmt.Errorf("error reading modules: %w", err)
 	}
+
+	mods = FilterVendorModules(mods)
 
 	nodes, err := BuildModuleNodes(mods)
 	if err != nil {

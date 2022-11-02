@@ -30,8 +30,8 @@ import (
 
 var _ = Describe("Internal", func() {
 	var (
-		tmpDir                                                   string
-		moduleA, moduleB, moduleB1, moduleB11, moduleB2, moduleC Module
+		tmpDir                                                            string
+		moduleA, moduleB, moduleB1, moduleB11, moduleB2, moduleC, moduleD Module
 	)
 	BeforeEach(func() {
 		var err error
@@ -41,6 +41,7 @@ var _ = Describe("Internal", func() {
 		moduleA = Module{
 			Path: "a",
 			Dir:  "/tmp/a",
+			Main: true,
 		}
 		moduleB = Module{
 			Path: "example.org/b",
@@ -61,6 +62,9 @@ var _ = Describe("Internal", func() {
 		moduleC = Module{
 			Path: "example.org/user/c",
 			Dir:  "/tmp/example.org/user/c",
+		}
+		moduleD = Module{
+			Path: "example.org/d",
 		}
 	})
 	AfterEach(func() {
@@ -146,7 +150,14 @@ var _ = Describe("Internal", func() {
 			mods, err := ParseModules(bytes.NewReader(data))
 			Expect(err).NotTo(HaveOccurred())
 
-			Expect(mods).To(Equal([]Module{moduleA, moduleB}))
+			Expect(mods).To(Equal([]Module{moduleA, moduleB, moduleD}))
+		})
+	})
+
+	Describe("FilterVendorModules", func() {
+		It("should correctly filter the modules", func() {
+			mods := FilterVendorModules([]Module{moduleA, moduleB, moduleD})
+			Expect(mods).To(Equal([]Module{moduleB}))
 		})
 	})
 

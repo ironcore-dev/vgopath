@@ -1,6 +1,7 @@
 {
 	"Path": "a",
-	"Dir": "/tmp/a"
+	"Dir": "/tmp/a",
+	"Main": true
 }
 {
 	"Path": "example.org/b",
