@@ -1,4 +1,4 @@
-// Copyright 2022 OnMetal authors
+// Copyright 2023 OnMetal authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,16 +12,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package version
 
 import (
-	"log"
+	"io"
 
-	"github.com/onmetal/vgopath/internal/cmd/vgopath"
+	"github.com/onmetal/vgopath/internal/version"
+	"github.com/spf13/cobra"
 )
 
-func main() {
-	if err := vgopath.Command().Execute(); err != nil {
-		log.Fatalln(err.Error())
+func Command(out io.Writer) *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "version",
+		Short: "Prints version information.",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return Run(out)
+		},
 	}
+
+	return cmd
+}
+
+func Run(out io.Writer) error {
+	version.FPrint(out)
+	return nil
 }

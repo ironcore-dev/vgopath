@@ -12,16 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package link_test
 
 import (
-	"log"
+	"testing"
 
-	"github.com/onmetal/vgopath/internal/cmd/vgopath"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
-func main() {
-	if err := vgopath.Command().Execute(); err != nil {
-		log.Fatalln(err.Error())
-	}
+func TestInternal(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Link Suite")
 }

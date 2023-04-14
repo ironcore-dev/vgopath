@@ -1,4 +1,4 @@
-// Copyright 2022 OnMetal authors
+// Copyright 2023 OnMetal authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,16 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package module_test
 
 import (
-	"log"
+	"path/filepath"
+	"testing"
 
-	"github.com/onmetal/vgopath/internal/cmd/vgopath"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/gexec"
 )
 
-func main() {
-	if err := vgopath.Command().Execute(); err != nil {
-		log.Fatalln(err.Error())
-	}
+var gocatExecutable string
+
+var _ = BeforeSuite(func() {
+	gocatDir, err := gexec.Build(".", "-C", filepath.Join("..", "testdata", "gocat"))
+	Expect(err).NotTo(HaveOccurred())
+	gocatExecutable = filepath.Join(gocatDir, "gocat")
+	DeferCleanup(gexec.CleanupBuildArtifacts)
+})
+
+func TestInternal(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Internal Suite")
 }

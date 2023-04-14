@@ -12,17 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package internal_test
+package link_test
 
 import (
-	"bytes"
 	"fmt"
 	"go/build"
-	"io"
 	"os"
 	"path/filepath"
 
-	. "github.com/onmetal/vgopath/internal"
+	. "github.com/onmetal/vgopath/internal/link"
+	"github.com/onmetal/vgopath/internal/module"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/onsi/gomega/types"
@@ -31,39 +30,39 @@ import (
 var _ = Describe("Internal", func() {
 	var (
 		tmpDir                                                            string
-		moduleA, moduleB, moduleB1, moduleB11, moduleB2, moduleC, moduleD Module
+		moduleA, moduleB, moduleB1, moduleB11, moduleB2, moduleC, moduleD module.Module
 	)
 	BeforeEach(func() {
 		var err error
 		tmpDir, err = os.MkdirTemp("", "test")
 		Expect(err).NotTo(HaveOccurred())
 
-		moduleA = Module{
+		moduleA = module.Module{
 			Path: "a",
 			Dir:  "/tmp/a",
 			Main: true,
 		}
-		moduleB = Module{
+		moduleB = module.Module{
 			Path: "example.org/b",
 			Dir:  "/tmp/example.org/b",
 		}
-		moduleB1 = Module{
+		moduleB1 = module.Module{
 			Path: "example.org/b/1",
 			Dir:  "/tmp/example.org/b/1",
 		}
-		moduleB11 = Module{
+		moduleB11 = module.Module{
 			Path: "example.org/b/1/1",
 			Dir:  "/tmp/example.org/b/1/1",
 		}
-		moduleB2 = Module{
+		moduleB2 = module.Module{
 			Path: "example.org/b/2",
 			Dir:  "/tmp/example.org/b/2",
 		}
-		moduleC = Module{
+		moduleC = module.Module{
 			Path: "example.org/user/c",
 			Dir:  "/tmp/example.org/user/c",
 		}
-		moduleD = Module{
+		moduleD = module.Module{
 			Path: "example.org/d",
 		}
 	})
@@ -73,21 +72,9 @@ var _ = Describe("Internal", func() {
 		}
 	})
 
-	Describe("StartGoModListJSONReader", func() {
-		It("should start a module reader", FlakeAttempts(50), func() {
-			rc, err := StartGoModListJSONReader("..")
-			Expect(err).NotTo(HaveOccurred())
-			defer func() { Expect(rc.Close()).To(Succeed()) }()
-
-			data, err := io.ReadAll(rc)
-			Expect(err).NotTo(HaveOccurred())
-			Expect(data).NotTo(BeEmpty())
-		})
-	})
-
 	Describe("BuildModuleNodes", func() {
 		It("should correctly build the nodes", func() {
-			nodes, err := BuildModuleNodes([]Module{moduleA, moduleB, moduleB1, moduleB11, moduleB2, moduleC})
+			nodes, err := BuildModuleNodes([]module.Module{moduleA, moduleB, moduleB1, moduleB11, moduleB2, moduleC})
 			Expect(err).NotTo(HaveOccurred())
 			Expect(nodes).To(ConsistOf(
 				Node{
@@ -132,32 +119,20 @@ var _ = Describe("Internal", func() {
 		})
 
 		It("should error on invalid module paths", func() {
-			_, err := BuildModuleNodes([]Module{{Path: ""}})
+			_, err := BuildModuleNodes([]module.Module{{Path: ""}})
 			Expect(err).To(HaveOccurred())
 		})
 
 		It("should error if there are modules pointing to the same path", func() {
-			_, err := BuildModuleNodes([]Module{{Path: "foo"}, {Path: "foo"}})
+			_, err := BuildModuleNodes([]module.Module{{Path: "foo"}, {Path: "foo"}})
 			Expect(err).To(HaveOccurred())
 		})
 	})
 
-	Describe("ParseModules", func() {
-		It("should correctly parse the modules", func() {
-			data, err := os.ReadFile(filepath.Join("testdata", "modules.json.stream"))
-			Expect(err).NotTo(HaveOccurred())
-
-			mods, err := ParseModules(bytes.NewReader(data))
-			Expect(err).NotTo(HaveOccurred())
-
-			Expect(mods).To(Equal([]Module{moduleA, moduleB, moduleD}))
-		})
-	})
-
-	Describe("FilterVendorModules", func() {
+	Describe("FilterModulesWithoutDir", func() {
 		It("should correctly filter the modules", func() {
-			mods := FilterVendorModules([]Module{moduleA, moduleB, moduleD})
-			Expect(mods).To(Equal([]Module{moduleB}))
+			mods := FilterModulesWithoutDir([]module.Module{moduleA, moduleB, moduleD})
+			Expect(mods).To(Equal([]module.Module{moduleA, moduleB}))
 		})
 	})
 
@@ -174,7 +149,7 @@ var _ = Describe("Internal", func() {
 			Expect(os.MkdirAll(dstGopathDir, 0777)).To(Succeed())
 		})
 
-		Describe("LinkGoBin", func() {
+		Describe("GoBin", func() {
 			var (
 				srcGoBinDir string
 				dstGoBinDir string
@@ -191,19 +166,19 @@ var _ = Describe("Internal", func() {
 				defer setEnvAndRevert("GOBIN", "")()
 				defer setAndRevert(&build.Default.GOPATH, srcGopathDir)()
 
-				Expect(LinkGoBin(dstGopathDir)).To(Succeed())
+				Expect(GoBin(dstGopathDir)).To(Succeed())
 				Expect(dstGoBinDir).To(BeASymlinkTo(srcGoBinDir))
 			})
 
 			It("should correctly link go bin if GOBIN is set", func() {
 				defer setEnvAndRevert("GOBIN", srcGoBinDir)()
 
-				Expect(LinkGoBin(dstGopathDir)).To(Succeed())
+				Expect(GoBin(dstGopathDir)).To(Succeed())
 				Expect(dstGoBinDir).To(BeASymlinkTo(srcGoBinDir))
 			})
 		})
 
-		Describe("LinkGoPkg", func() {
+		Describe("GoPkg", func() {
 			var (
 				srcGoPkgDir string
 				dstGoPkgDir string
@@ -219,7 +194,7 @@ var _ = Describe("Internal", func() {
 			It("should correctly link go pkg", func() {
 				defer setAndRevert(&build.Default.GOPATH, srcGopathDir)()
 
-				Expect(LinkGoPkg(dstGopathDir)).To(Succeed())
+				Expect(GoPkg(dstGopathDir)).To(Succeed())
 				Expect(dstGoPkgDir).To(BeASymlinkTo(srcGoPkgDir))
 			})
 		})

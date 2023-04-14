@@ -1,4 +1,4 @@
-// Copyright 2022 OnMetal authors
+// Copyright 2023 OnMetal authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,16 +12,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package internal_test
+package main
 
 import (
-	"testing"
-
-	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+	"flag"
+	"io"
+	"log"
+	"os"
 )
 
-func TestInternal(t *testing.T) {
-	RegisterFailHandler(Fail)
-	RunSpecs(t, "Internal Suite")
+func main() {
+	flag.Parse()
+
+	filename := flag.Arg(0)
+	if filename == "" {
+		log.Fatalln("Must specify filename")
+	}
+
+	f, err := os.Open(filename)
+	if err != nil {
+		log.Fatalf("Error opening file %q: %v\n", filename, err)
+	}
+	defer func() { _ = f.Close() }()
+
+	if _, err := io.Copy(os.Stdout, f); err != nil {
+		log.Fatalf("Error copying file content: %v\n", err)
+	}
 }

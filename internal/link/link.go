@@ -12,30 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package internal
+package link
 
 import (
-	"encoding/json"
 	"fmt"
 	"go/build"
-	"io"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"sort"
 	"strings"
-	"sync"
-	"time"
+
+	"github.com/onmetal/vgopath/internal/module"
+	"github.com/spf13/pflag"
 )
 
 type Node struct {
 	Segment  string
-	Module   *Module
+	Module   *module.Module
 	Children []Node
 }
 
-func insertModuleInNode(node *Node, mod Module, relativeSegments []string) error {
+func insertModuleInNode(node *Node, mod module.Module, relativeSegments []string) error {
 	if len(relativeSegments) == 0 {
 		if node.Module != nil {
 			return fmt.Errorf("cannot insert module %s into node %s: module %s already exists", mod.Path, node.Segment, node.Module.Path)
@@ -74,16 +72,16 @@ func insertModuleInNode(node *Node, mod Module, relativeSegments []string) error
 	return nil
 }
 
-func BuildModuleNodes(modules []Module) ([]Node, error) {
+func BuildModuleNodes(modules []module.Module) ([]Node, error) {
 	sort.Slice(modules, func(i, j int) bool { return modules[i].Path < modules[j].Path })
 	nodeByRootSegment := make(map[string]*Node)
 
-	for _, module := range modules {
-		if module.Path == "" {
+	for _, mod := range modules {
+		if mod.Path == "" {
 			return nil, fmt.Errorf("invalid empty module path")
 		}
 
-		segments := strings.Split(module.Path, "/")
+		segments := strings.Split(mod.Path, "/")
 
 		rootSegment := segments[0]
 		node, ok := nodeByRootSegment[rootSegment]
@@ -92,7 +90,7 @@ func BuildModuleNodes(modules []Module) ([]Node, error) {
 			nodeByRootSegment[rootSegment] = node
 		}
 
-		if err := insertModuleInNode(node, module, segments[1:]); err != nil {
+		if err := insertModuleInNode(node, mod, segments[1:]); err != nil {
 			return nil, err
 		}
 	}
@@ -104,140 +102,53 @@ func BuildModuleNodes(modules []Module) ([]Node, error) {
 	return res, nil
 }
 
-type Module struct {
-	Path    string
-	Dir     string
-	Version string
-	Main    bool
-}
-
-type moduleReader struct {
-	mu sync.Mutex
-
-	cmd    *exec.Cmd
-	stdout io.ReadCloser
-
-	exited  bool
-	waitErr error
-}
-
-func StartGoModListJSONReader(dir string) (io.ReadCloser, error) {
-	cmd := exec.Command("go", "list", "-m", "-json", "all")
-	cmd.Dir = dir
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		return nil, err
-	}
-
-	if err := cmd.Start(); err != nil {
-		return nil, err
-	}
-
-	return &moduleReader{
-		cmd:    cmd,
-		stdout: stdout,
-	}, nil
-}
-
-func (r *moduleReader) Read(p []byte) (n int, err error) {
-	return r.stdout.Read(p)
-}
-
-func (r *moduleReader) Close() error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	if r.exited {
-		return r.waitErr
-	}
-
-	waitDone := make(chan struct{})
-	go func() {
-		defer close(waitDone)
-		r.waitErr = r.cmd.Wait()
-	}()
-
-	timer := time.NewTimer(3 * time.Second)
-	defer timer.Stop()
-
-	select {
-	case <-timer.C:
-		return fmt.Errorf("error waiting for command to be completed")
-	case <-waitDone:
-		return r.waitErr
-	}
-}
-
-func ParseModules(r io.Reader) ([]Module, error) {
-	var (
-		mods []Module
-		dec  = json.NewDecoder(r)
-	)
-
-	for {
-		var mod Module
-		if err := dec.Decode(&mod); err != nil {
-			if err == io.EOF {
-				break
-			}
-			return nil, err
-		}
-
-		mods = append(mods, mod)
-	}
-	return mods, nil
-}
-
-func ReadModules() ([]Module, error) {
-	rc, err := StartGoModListJSONReader("")
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = rc.Close() }()
-
-	mods, err := ParseModules(rc)
-	if err != nil {
-		return nil, fmt.Errorf("error parsing modules: %w", err)
-	}
-
-	return mods, nil
-}
-
-func FilterVendorModules(modules []Module) []Module {
-	var res []Module
-	for _, module := range modules {
-		// Don't vendor modules without paths / main modules.
-		if module.Dir == "" || module.Version == "" && module.Main {
+func FilterModulesWithoutDir(modules []module.Module) []module.Module {
+	var res []module.Module
+	for _, mod := range modules {
+		// Don't vendor modules without backing directory.
+		if mod.Dir == "" {
 			continue
 		}
 
-		res = append(res, module)
+		res = append(res, mod)
 	}
 
 	return res
 }
 
 type Options struct {
+	SrcDir    string
 	SkipGoBin bool
 	SkipGoSrc bool
 	SkipGoPkg bool
 }
 
-func Run(dstDir string, opts Options) error {
+func (o *Options) AddFlags(fs *pflag.FlagSet) {
+	fs.StringVar(&o.SrcDir, "src-dir", o.SrcDir, "Source directory for linking. Empty string indicates current directory.")
+	fs.BoolVar(&o.SkipGoPkg, "skip-go-pkg", o.SkipGoPkg, "Whether to skip mirroring $GOPATH/pkg")
+	fs.BoolVar(&o.SkipGoBin, "skip-go-bin", o.SkipGoBin, "Whether to skip mirroring $GOBIN")
+	fs.BoolVar(&o.SkipGoSrc, "skip-go-src", o.SkipGoSrc, "Whether to skip mirroring modules as src")
+}
+
+func Link(dstDir string, opts Options) error {
+	if opts.SrcDir == "" {
+		opts.SrcDir = "."
+	}
+
 	if !opts.SkipGoSrc {
-		if err := LinkGoSrc(dstDir); err != nil {
+		if err := GoSrc(dstDir, opts.SrcDir); err != nil {
 			return fmt.Errorf("error linking GOPATH/src: %w", err)
 		}
 	}
 
 	if !opts.SkipGoBin {
-		if err := LinkGoBin(dstDir); err != nil {
+		if err := GoBin(dstDir); err != nil {
 			return fmt.Errorf("error linking GOPATH/bin: %w", err)
 		}
 	}
 
 	if !opts.SkipGoPkg {
-		if err := LinkGoPkg(dstDir); err != nil {
+		if err := GoPkg(dstDir); err != nil {
 			return fmt.Errorf("error linking GOPATH/pkg: %w", err)
 		}
 	}
@@ -245,7 +156,7 @@ func Run(dstDir string, opts Options) error {
 	return nil
 }
 
-func LinkGoBin(dstDir string) error {
+func GoBin(dstDir string) error {
 	dstGoBinDir := filepath.Join(dstDir, "bin")
 	if err := os.RemoveAll(dstGoBinDir); err != nil {
 		return err
@@ -262,7 +173,7 @@ func LinkGoBin(dstDir string) error {
 	return nil
 }
 
-func LinkGoPkg(dstDir string) error {
+func GoPkg(dstDir string) error {
 	dstGoPkgDir := filepath.Join(dstDir, "pkg")
 	if err := os.RemoveAll(dstGoPkgDir); err != nil {
 		return err
@@ -274,13 +185,13 @@ func LinkGoPkg(dstDir string) error {
 	return nil
 }
 
-func LinkGoSrc(dstDir string) error {
-	mods, err := ReadModules()
+func GoSrc(dstDir, srcDir string) error {
+	mods, err := module.ReadAllGoListModules(module.InDir(srcDir))
 	if err != nil {
 		return fmt.Errorf("error reading modules: %w", err)
 	}
 
-	mods = FilterVendorModules(mods)
+	mods = FilterModulesWithoutDir(mods)
 
 	nodes, err := BuildModuleNodes(mods)
 	if err != nil {
@@ -296,7 +207,7 @@ func LinkGoSrc(dstDir string) error {
 		return err
 	}
 
-	if err := LinkNodes(dstGoSrcDir, nodes); err != nil {
+	if err := Nodes(dstGoSrcDir, nodes); err != nil {
 		return err
 	}
 	return nil
@@ -324,7 +235,7 @@ func joinLinkNodeError(node Node, err error) error {
 	}
 }
 
-func LinkNodes(dir string, nodes []Node) error {
+func Nodes(dir string, nodes []Node) error {
 	for _, node := range nodes {
 		if err := linkNode(dir, node); err != nil {
 			return joinLinkNodeError(node, err)
@@ -369,5 +280,5 @@ func linkNode(dir string, node Node) error {
 			}
 		}
 	}
-	return LinkNodes(dstDir, node.Children)
+	return Nodes(dstDir, node.Children)
 }

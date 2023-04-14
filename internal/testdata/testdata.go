@@ -1,4 +1,4 @@
-// Copyright 2022 OnMetal authors
+// Copyright 2023 OnMetal authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,16 +12,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package testdata
 
-import (
-	"log"
+import "github.com/onmetal/vgopath/internal/module"
 
-	"github.com/onmetal/vgopath/internal/cmd/vgopath"
-)
-
-func main() {
-	if err := vgopath.Command().Execute(); err != nil {
-		log.Fatalln(err.Error())
+var (
+	ModuleA = module.Module{
+		Path: "a",
+		Dir:  "/tmp/a",
+		Main: true,
 	}
-}
+
+	ModuleB = module.Module{
+		Path: "example.org/b",
+		Dir:  "/tmp/example.org/b",
+	}
+
+	ModuleD = module.Module{
+		Path: "example.org/d",
+	}
+
+	Modules = []module.Module{
+		ModuleA,
+		ModuleB,
+		ModuleD,
+	}
+)

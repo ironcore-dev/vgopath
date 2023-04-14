@@ -1,4 +1,4 @@
-// Copyright 2022 OnMetal authors
+// Copyright 2023 OnMetal authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,16 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package main
+package version
 
 import (
-	"log"
-
-	"github.com/onmetal/vgopath/internal/cmd/vgopath"
+	"fmt"
+	"io"
+	"os"
+	"runtime/debug"
 )
 
-func main() {
-	if err := vgopath.Command().Execute(); err != nil {
-		log.Fatalln(err.Error())
+func Version() string {
+	info, ok := debug.ReadBuildInfo()
+	if !ok || info == nil || info.Main.Version == "" {
+		return "(unknown)"
 	}
+	return info.Main.Version
+}
+
+func FPrint(w io.Writer) {
+	_, _ = fmt.Fprintf(w, "Version: %s\n", Version())
+}
+
+func Print() {
+	FPrint(os.Stdout)
 }
