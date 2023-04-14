@@ -32,27 +32,27 @@ help: ## Display this help.
 ##@ Development
 
 .PHONY: fmt
-fmt: ## Run go fmt against code.
-	go fmt ./...
-
-.PHONY: lint
-lint:
-	golangci-lint run ./...
+fmt: goimports ## Run goimports against code.
+	$(GOIMPORTS) -w .
 
 .PHONY: vet
-vet:
+vet: ## Run go vet against code.
 	go vet ./...
 
-.PHONY: addlicense
-addlicense: ## Add license headers to all go files.
-	find . -name '*.go' -exec go run github.com/google/addlicense -c 'OnMetal authors' {} +
+.PHONY: lint
+lint: ## Run golangci-lint on the code.
+	golangci-lint run ./...
 
-.PHONY: checklicense
-checklicense: ## Check that every file has a license header present.
-	find . -name '*.go' -exec go run github.com/google/addlicense  -check -c 'OnMetal authors' {} +
+.PHONY: add-license
+add-license: addlicense ## Add license headers to all go files.
+	find . -name '*.go' -exec $(ADDLICENSE) -c 'OnMetal authors' {} +
+
+.PHONY: check-license
+check-license: addlicense ## Check that every file has a license header present.
+	find . -name '*.go' -exec $(ADDLICENSE) -check -c 'OnMetal authors' {} +
 
 .PHONY: check
-check: addlicense lint test # Generate manifests, code, lint, add licenses, test
+check: add-license fmt lint test # Generate manifests, code, lint, add licenses, test
 
 .PHONY: test
 test: fmt vet ## Run tests.
@@ -65,13 +65,34 @@ build: fmt vet ## Build manager binary.
 	go build -o bin/vgopath main.go
 
 .PHONY: install
-install:
+install: ## Install vgopath into GOBIN.
 	go install .
 
 .PHONY: run
 run: fmt lint ## Run a controller from your host.
 	go run ./main.go
 
-.PHONY: release
-release: fmt lint
-	goreleaser release --snapshot --rm-dist
+##@ Tools
+
+## Location to install dependencies to
+LOCALBIN ?= $(shell pwd)/bin
+$(LOCALBIN):
+	mkdir -p $(LOCALBIN)
+
+## Tool Binaries
+ADDLICENSE ?= $(LOCALBIN)/addlicense
+GOIMPORTS ?= $(LOCALBIN)/goimports
+
+## Tool Versions
+ADDLICENSE_VERSION ?= v1.1.0
+GOIMPORTS_VERSION ?= v0.5.0
+
+.PHONY: addlicense
+addlicense: $(ADDLICENSE) ## Download addlicense locally if necessary.
+$(ADDLICENSE): $(LOCALBIN)
+	test -s $(LOCALBIN)/addlicense || GOBIN=$(LOCALBIN) go install github.com/google/addlicense@$(ADDLICENSE_VERSION)
+
+.PHONY: goimports
+goimports: $(GOIMPORTS) ## Download goimports locally if necessary.
+$(GOIMPORTS): $(LOCALBIN)
+	test -s $(LOCALBIN)/goimports || GOBIN=$(LOCALBIN) go install golang.org/x/tools/cmd/goimports@$(GOIMPORTS_VERSION)
