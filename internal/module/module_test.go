@@ -70,5 +70,25 @@ var _ = Describe("Internal", func() {
 			Expect(n).To(Equal(3))
 			Expect(modules[:3]).To(Equal(testdata.Modules))
 		})
+
+		It("should properly chunk the command data JSON stream", func() {
+			cmd := func() *exec.Cmd {
+				return exec.Command(gocatExecutable, filepath.Join("..", "testdata", "modules.json.stream"))
+			}
+			rc, err := module.OpenGoList(&module.OpenGoListOptions{Command: cmd})
+			Expect(err).NotTo(HaveOccurred())
+			DeferCleanup(rc.Close)
+
+			modules := make([]module.Module, 4)
+			n, err := rc.Read(modules[:2])
+			Expect(err).NotTo(HaveOccurred())
+			Expect(n).To(Equal(2))
+
+			n, err = rc.Read(modules[2:4])
+			Expect(err).To(MatchError(io.EOF))
+			Expect(n).To(Equal(1))
+
+			Expect(modules[:3]).To(Equal(testdata.Modules))
+		})
 	})
 })

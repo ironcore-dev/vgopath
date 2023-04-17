@@ -123,7 +123,7 @@ func (r *readCloser) Read(data []Module) (n int, err error) {
 			return i, err
 		}
 	}
-	return 0, nil
+	return len(data), nil
 }
 
 func (r *readCloser) Close() error {
