@@ -8,7 +8,7 @@ legacy tools to run with (`kubernetes/code-generator` I'm looking at you...).
 The simplest way to install `vgopath` is by running
 
 ```shell
-go install github.com/onmetal/vgopath@latest
+go install github.com/ironcore-dev/vgopath@latest
 ```
 
 ## Usage

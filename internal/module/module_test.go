@@ -1,4 +1,4 @@
-// Copyright 2022 OnMetal authors
+// Copyright 2022 IronCore authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,8 +19,8 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"github.com/onmetal/vgopath/internal/module"
-	"github.com/onmetal/vgopath/internal/testdata"
+	"github.com/ironcore-dev/vgopath/internal/module"
+	"github.com/ironcore-dev/vgopath/internal/testdata"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
