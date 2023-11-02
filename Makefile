@@ -41,18 +41,18 @@ vet: ## Run go vet against code.
 
 .PHONY: lint
 lint: ## Run golangci-lint on the code.
-	golangci-lint run ./...
+	$(GOLANGCILINT) run ./...
 
 .PHONY: add-license
 add-license: addlicense ## Add license headers to all go files.
-	find . -name '*.go' -exec $(ADDLICENSE) -c 'OnMetal authors' {} +
+	find . -name '*.go' -exec $(ADDLICENSE) -c 'IronCore authors' {} +
 
 .PHONY: check-license
 check-license: addlicense ## Check that every file has a license header present.
-	find . -name '*.go' -exec $(ADDLICENSE) -check -c 'OnMetal authors' {} +
+	find . -name '*.go' -exec $(ADDLICENSE) -check -c 'IronCore authors' {} +
 
 .PHONY: check
-check: add-license fmt lint test # Generate manifests, code, lint, add licenses, test
+check: add-license fmt lint test golangci-lint # Generate manifests, code, lint, add licenses, test
 
 .PHONY: test
 test: fmt vet ## Run tests.
@@ -82,10 +82,12 @@ $(LOCALBIN):
 ## Tool Binaries
 ADDLICENSE ?= $(LOCALBIN)/addlicense
 GOIMPORTS ?= $(LOCALBIN)/goimports
+GOLANGCILINT ?= $(LOCALBIN)/golangci-lint
 
 ## Tool Versions
-ADDLICENSE_VERSION ?= v1.1.0
-GOIMPORTS_VERSION ?= v0.5.0
+ADDLICENSE_VERSION ?= v1.1.1
+GOIMPORTS_VERSION ?= v0.14.0
+GOLANGCILINT_VERSION ?= v1.55.1
 
 .PHONY: addlicense
 addlicense: $(ADDLICENSE) ## Download addlicense locally if necessary.
@@ -96,3 +98,8 @@ $(ADDLICENSE): $(LOCALBIN)
 goimports: $(GOIMPORTS) ## Download goimports locally if necessary.
 $(GOIMPORTS): $(LOCALBIN)
 	test -s $(LOCALBIN)/goimports || GOBIN=$(LOCALBIN) go install golang.org/x/tools/cmd/goimports@$(GOIMPORTS_VERSION)
+
+.PHONY: goimports
+golangci-lint: $(GOLANGCILINT) ## Download golangci-lint locally if necessary.
+$(GOLANGCILINT): $(LOCALBIN)
+	test -s $(LOCALBIN)/golangci-lint || GOBIN=$(LOCALBIN) go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCILINT_VERSION)

@@ -1,4 +1,4 @@
-module github.com/onmetal/vgopath
+module github.com/ironcore-dev/vgopath
 
 go 1.20
 

@@ -1,4 +1,4 @@
-// Copyright 2022 OnMetal authors
+// Copyright 2022 IronCore authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@ package main
 import (
 	"log"
 
-	"github.com/onmetal/vgopath/internal/cmd/vgopath"
+	"github.com/ironcore-dev/vgopath/internal/cmd/vgopath"
 )
 
 func main() {
