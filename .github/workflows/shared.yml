@@ -1,0 +1,12 @@
+name: "Size Label"
+
+on:
+  pull_request_target:
+    types:
+      - opened
+      - edited
+      - synchronize
+
+jobs:
+  size-label:
+    uses: ironcore-dev/.github/.github/workflows/compliance.yml@main
