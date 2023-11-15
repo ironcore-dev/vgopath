@@ -23,7 +23,7 @@ Example usage could look like this:
 mkdir -p my-vgopath
 
 # Do the linking in my-vgopath
-vgopath my-vgopath
+vgopath -o my-vgopath
 ```
 
 Once done, the structure will look something like
