@@ -12,8 +12,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/ironcore-dev/vgopath/internal/module"
 	"github.com/spf13/pflag"
+
+	"github.com/ironcore-dev/vgopath/internal/module"
 )
 
 type Node struct {
@@ -261,7 +262,17 @@ func linkNode(dir string, node Node) error {
 			return err
 		}
 
+		childNames := make(map[string]struct{}, len(node.Children))
+		for _, child := range node.Children {
+			childNames[child.Segment] = struct{}{}
+		}
+
 		for _, entry := range entries {
+			// skip linking directories of the module hierarchy, they will be handled by a dedicated call
+			if _, ok := childNames[entry.Name()]; ok {
+				continue
+			}
+
 			srcPath := filepath.Join(srcDir, entry.Name())
 			dstPath := filepath.Join(dstDir, entry.Name())
 			if err := os.Symlink(srcPath, dstPath); err != nil {
