@@ -1,7 +1,7 @@
-name: "Size Label"
+name: Size Label
 
 on:
-  pull_request:
+  pull_request_target:
     types:
       - opened
       - edited
@@ -12,4 +12,9 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
-    uses: ironcore-dev/.github/.github/workflows/size-label.yml@main
+    runs-on: ubuntu-latest
+    steps:
+      - name: size-label
+        uses: pascalgn/size-label-action@v0.5.2
+        env:
+          GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
