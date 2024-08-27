@@ -40,7 +40,7 @@ vet: ## Run go vet against code.
 	go vet ./...
 
 .PHONY: lint
-lint: ## Run golangci-lint on the code.
+lint: golangci-lint ## Run golangci-lint on the code.
 	$(GOLANGCILINT) run ./...
 
 .PHONY: add-license
@@ -86,8 +86,8 @@ GOLANGCILINT ?= $(LOCALBIN)/golangci-lint
 
 ## Tool Versions
 ADDLICENSE_VERSION ?= v1.1.1
-GOIMPORTS_VERSION ?= v0.20.0
-GOLANGCILINT_VERSION ?= v1.57.2
+GOIMPORTS_VERSION ?= v0.24.0
+GOLANGCILINT_VERSION ?= v1.60
 
 .PHONY: addlicense
 addlicense: $(ADDLICENSE) ## Download addlicense locally if necessary.
