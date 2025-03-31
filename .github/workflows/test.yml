@@ -1,8 +1,7 @@
-name: test
+name: Pull Request Code test
 
 on:
   pull_request:
-  push:
 
 jobs:
   checks:
