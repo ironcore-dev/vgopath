@@ -1,6 +1,7 @@
 module github.com/ironcore-dev/vgopath
 
 go 1.24.0
+
 require (
 	github.com/onsi/ginkgo/v2 v2.23.3
 	github.com/onsi/gomega v1.36.3
