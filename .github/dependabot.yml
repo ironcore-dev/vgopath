@@ -5,11 +5,7 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
-    reviewers:
-      - "ironcore-dev/core"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
-    reviewers:
-      - "ironcore-dev/core"
