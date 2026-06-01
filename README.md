@@ -39,3 +39,11 @@ my-vgopath
 ├── pkg -> <GOPATH>/pkg
 └── src -> various subdirectories
 ```
+
+## Licensing
+
+Copyright 2025 SAP SE or an SAP affiliate company and IronCore contributors. Please see our [LICENSE](LICENSE) for
+copyright and license information. Detailed information including third-party components and their licensing/copyright
+information is available [via the REUSE tool](https://api.reuse.software/info/github.com/ironcore-dev/vgopath).
+
+<p align="center"><img alt="Bundesministerium für Wirtschaft und Energie (BMWE)-EU funding logo" src="https://apeirora.eu/assets/img/BMWK-EU.png" width="400"/></p>
